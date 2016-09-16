@@ -1,4 +1,4 @@
-package ru.uskov.dmitry.tafk.lab1;
+package ru.uskov.dmitry.tafk.lab1.methods;
 
 /**
  * Created by Dmitry on 11.09.2016.

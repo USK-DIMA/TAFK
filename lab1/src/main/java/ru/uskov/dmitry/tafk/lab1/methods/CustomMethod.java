@@ -1,5 +1,6 @@
-package ru.uskov.dmitry.tafk.lab1;
+package ru.uskov.dmitry.tafk.lab1.methods;
 
+import ru.uskov.dmitry.tafk.lab1.Calculator;
 import ru.uskov.dmitry.tafk.lab1.exception.IllegalArgumentCountException;
 import ru.uskov.dmitry.tafk.lab1.exception.NoDeffCustomMethodException;
 import ru.uskov.dmitry.tafk.lab1.exception.ParenthesisNumberException;
@@ -75,6 +76,7 @@ abstract public class CustomMethod {
                 startArgIndex = i+1;
             }
         }
+        argsList.add(inputString.substring(startArgIndex, inputString.length()));
         //Проверяем кол-во аргументов
         if(argsList.size()!=getArgumentCount()){
             throw new IllegalArgumentCountException(getArgumentCount(), argsList.size(), getName()+"("+inputString+")");

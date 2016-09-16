@@ -3,9 +3,11 @@ package ru.uskov.dmitry.tafk.lab1;
 import ru.uskov.dmitry.tafk.lab1.exception.IllegalArgumentCountException;
 import ru.uskov.dmitry.tafk.lab1.exception.NoDeffCustomMethodException;
 import ru.uskov.dmitry.tafk.lab1.exception.ParenthesisNumberException;
+import ru.uskov.dmitry.tafk.lab1.methods.CustomMethod;
+import ru.uskov.dmitry.tafk.lab1.methods.PowMethod;
+import ru.uskov.dmitry.tafk.lab1.methods.SqrtMethod;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by Dmitry on 11.09.2016.
@@ -14,23 +16,15 @@ public class Calculator {
 
     public static final String FUNCTION_NAME_POW = "pow";
 
-    private static final char[] SYSTEM_SYMBOL = {')', '(', '^', '*', '/', '+', '-'};
+    private static final SystemSymbol[] SYSTEM_SYMBOL = SystemSymbol.getAllSymbols();
 
     private static List<CustomMethod> customMethodList = initCustomMethodList();
 
     private static List<CustomMethod> initCustomMethodList() {
         List<CustomMethod> customMethodList = new ArrayList<>();
         customMethodList.add(new PowMethod());
+        customMethodList.add(new SqrtMethod());
         return customMethodList;
-    }
-
-    public String getRevert(String input){
-        StringBuilder builder = new StringBuilder(input.length());
-        List<String> stack = new ArrayList<>();
-        for(int i=0; i<input.length(); i++){
-            //char ch = input
-        }
-        return null;
     }
 
     public String calculate(String input) throws IllegalArgumentCountException, NoDeffCustomMethodException, ParenthesisNumberException {
@@ -40,7 +34,7 @@ public class Calculator {
         for(int i=0; i<input.length(); i++){
             switch (input.charAt(i)){
                 case '(':
-                    if(openingParenthesisNum==0){
+                    if(openingParenthesisNum==clousingParenthesisNum){
                         firstOpeningParanthesisIndex=i;
                     }
                     openingParenthesisNum++;
@@ -60,36 +54,138 @@ public class Calculator {
                         }
                         //заменяем кусок входной строки.НО НАДО НЕ ЗАБЫТЬ ПРО итератор i!
                         input = replace(input, firstOpeningParanthesisIndex-customMethodNameLength, i, sub);
-                        i = i-(i-firstOpeningParanthesisIndex+sub.length())-1; //// TODO: 11.09.2016 убедится, что здесь всё правильно
+                        i = i - ((customMethodNameLength+(i-firstOpeningParanthesisIndex))-sub.length())-1;
                     }
                     break;
             }
         }
+
+
         /**По идее, ото всех скобок избавились и ото всех функций.*/
         if(find(input, new char[]{'(', ')'})){
             throw new ParenthesisNumberException("Number of Opened Parenthesis != number of Cloused Parenthesis");
         }
-        /**теперь производим обычные вычисления**/
-        for(int i=0; i<SYSTEM_SYMBOL.length; i++){
+
+        List<SystemSymbolInLine> systemIndex = getSystemIndex(input);
+        List<SystemSymbolInLine> systemIndexSortByPriority = new ArrayList<>(systemIndex);
+
+        Collections.sort(systemIndexSortByPriority, new Comparator<SystemSymbolInLine>() {
+            @Override
+            public int compare(SystemSymbolInLine o1, SystemSymbolInLine o2) {
+                return (o2.getSystemSymbol().getPriority() - o1.getSystemSymbol().getPriority());
+            }
+        });
+
+        LinkedList<Double> values = getValuesFromInput(input, systemIndex);
+        for(int i=0; i<systemIndexSortByPriority.size(); i++){
+            int number = systemIndexSortByPriority.get(i).number;
+            Double v1 = values.get(number);
+            Double v2 = values.get(number+1);
+            Double ans = calculate(systemIndexSortByPriority.get(i).getSystemSymbol().getSymbol(), v1, v2);
+            values.remove(number);
+            values.remove(number);
+            incrementNumber(systemIndex, number);
+            values.add(number, ans);
         }
-        return null;
+
+        if(values.size()!=1){
+            throw new RuntimeException("Something wrong");
+        } else {
+            return values.get(0).toString();
+        }
+
     }
 
 
-    private boolean find(String input, char[] strings) {
-        for(int i=0; i<input.length(); i++){
-            char ch = input.charAt(i);
-            for(int j=0; j<strings.length; j++){
-                if(ch == strings[j]){
-                    return false;
-                }
-            }
+    private void incrementNumber(List<SystemSymbolInLine> systemIndex, int number) {
+        for(int i=number+1; i<systemIndex.size(); i++){
+            systemIndex.get(i).incrementNumber();
         }
-        return true;
+    }
+
+    private Double calculate(char symbol, Double v1, Double v2) {
+        switch (symbol){
+            case '-': return v1-v2;
+            case '+': return v1+v2;
+            case '*': return v1*v2;
+            case '/': return v1/v2;
+            case '^': return Math.pow(v1, v2);
+            default: throw new RuntimeException("Неверный арифметический знак: "+ symbol);
+        }
     }
 
     /**
-     * Анализиует входну строку (Input) и индекс открывающейся скобки в строке  и возвращает кастомный метод, если это скобка относиться к какому-то кастомнумоу методу
+     * Достаёт из входной строки только числа. systemIndex содержит разделители
+     * @param input
+     * @param systemIndex отсортированн по индексу!
+     * @return
+     */
+    private LinkedList<Double> getValuesFromInput(String input, List<SystemSymbolInLine> systemIndex) {
+        LinkedList<Double> values = new LinkedList<>();
+        int stastIndex = 0;
+        for(int i=0; i<systemIndex.size(); i++){
+            values.add(Double.valueOf(input.substring(stastIndex, systemIndex.get(i).index)));
+            stastIndex=systemIndex.get(i).index+1;
+        }
+        values.add(Double.valueOf(input.substring(stastIndex, input.length())));
+        return values;
+    }
+
+    /**
+     * Возвращает индексы всех системных символов
+     * @param input
+     * @return
+     */
+/*    private List<Integer> getAllSystemIndex(String input) {
+        List<Integer> indexes = new ArrayList<>();
+        for(int i=0; i<input.length(); i++){
+            char ch = input.charAt(i);
+            if(isSystemSymbol(ch)){
+                indexes.add(i);
+            }
+        }
+        return indexes;
+    }*/
+
+    /**
+     * Возвращает индексы всех системных символов кроме тех минусов, которые относятся к числу например: 5*-3 будет возвращён только индекс 1
+     * @param input
+     * @return
+     */
+    private List<SystemSymbolInLine> getSystemIndex(String input) {
+        List<SystemSymbolInLine> indexes = new ArrayList<>();
+        int number=0;
+        for(int i=0; i<input.length(); i++){
+            char ch = input.charAt(i);
+            if(isSystemSymbol(ch)){
+                if(i==0 || (indexes.size()> 0 && indexes.get(indexes.size()-1).getIndex()==i-1)){
+                    if(ch!='-'){
+                        throw new RuntimeException("Ожидается знак -. Пришёл: "+ ch);
+                    }
+                } else {
+                    indexes.add(new SystemSymbolInLine(SystemSymbol.getByChar(ch), i, number));
+                    number++;//номер арифм знака по счёту
+                }
+            }
+        }
+        return indexes;
+    }
+
+
+    private boolean find(String input, char[] symbols) {
+        for(int i=0; i<input.length(); i++){
+            char ch = input.charAt(i);
+            for(int j=0; j<symbols.length; j++){
+                if(ch == symbols[j]){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Анализиует входну строку (input) и индекс открывающейся скобки в строке  и возвращает кастомный метод, если это скобка относиться к какому-то кастомнумоу методу
      * иначе null;
      * @return
      */
@@ -140,7 +236,7 @@ public class Calculator {
      */
     private boolean isSystemSymbol(char ch) {
         for(int i=0; i<SYSTEM_SYMBOL.length; i++){
-            if(ch ==SYSTEM_SYMBOL[i]){
+            if(ch ==SYSTEM_SYMBOL[i].getSymbol()){
                 return true;
             }
         }
@@ -162,6 +258,41 @@ public class Calculator {
         newStr.append(newSubString);
         newStr.append(str.substring(end+1));
         return newStr.toString();
+    }
+
+    public static class SystemSymbolInLine {
+
+        SystemSymbol systemSymbol;
+
+        private int index;
+
+        private int number;
+
+        public SystemSymbolInLine(SystemSymbol systemSymbol, int index, int number) {
+            this.systemSymbol = systemSymbol;
+            this.index = index;
+            this.number = number;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+
+        public void setIndex(int index) {
+            this.index = index;
+        }
+
+        public SystemSymbol getSystemSymbol() {
+            return systemSymbol;
+        }
+
+        public int getNumber() {
+            return number;
+        }
+
+        public void incrementNumber(){
+            number--;
+        }
     }
 
 }
