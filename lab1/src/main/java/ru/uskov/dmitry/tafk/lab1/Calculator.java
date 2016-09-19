@@ -14,8 +14,6 @@ import java.util.*;
  */
 public class Calculator {
 
-    public static final String FUNCTION_NAME_POW = "pow";
-
     private static final SystemSymbol[] SYSTEM_SYMBOL = SystemSymbol.getAllSymbols();
 
     private static List<CustomMethod> customMethodList = initCustomMethodList();
@@ -28,21 +26,22 @@ public class Calculator {
     }
 
     public String calculate(String input) throws IllegalArgumentCountException, NoDeffCustomMethodException, ParenthesisNumberException {
+        input=input.replace(" ","");
         int openingParenthesisNum = 0;
-        int clousingParenthesisNum = 0;
+        int closingParenthesisNum = 0;
         int firstOpeningParanthesisIndex = -1; //индекс первой отркывающей скобки
         for(int i=0; i<input.length(); i++){
             switch (input.charAt(i)){
                 case '(':
-                    if(openingParenthesisNum==clousingParenthesisNum){
+                    if(openingParenthesisNum==closingParenthesisNum){
                         firstOpeningParanthesisIndex=i;
                     }
                     openingParenthesisNum++;
                     break;
                 case ')':
-                    clousingParenthesisNum++;
+                    closingParenthesisNum++;
 
-                    if(openingParenthesisNum==clousingParenthesisNum){
+                    if(openingParenthesisNum==closingParenthesisNum){
                         CustomMethod customMethod = getCustomMethod(input, firstOpeningParanthesisIndex);
                         String sub;
                         int customMethodNameLength=0;
@@ -131,21 +130,6 @@ public class Calculator {
         return values;
     }
 
-    /**
-     * Возвращает индексы всех системных символов
-     * @param input
-     * @return
-     */
-/*    private List<Integer> getAllSystemIndex(String input) {
-        List<Integer> indexes = new ArrayList<>();
-        for(int i=0; i<input.length(); i++){
-            char ch = input.charAt(i);
-            if(isSystemSymbol(ch)){
-                indexes.add(i);
-            }
-        }
-        return indexes;
-    }*/
 
     /**
      * Возвращает индексы всех системных символов кроме тех минусов, которые относятся к числу например: 5*-3 будет возвращён только индекс 1
