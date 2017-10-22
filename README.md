@@ -4,6 +4,7 @@
 Возможность динамически добавлять функции
 
 примеры из тестов:
+
 assertEquals("27.0", new Calculator().calculate("2+pow(5, 2)"));
 
 assertEquals("18.0", new Calculator().calculate("2+pow(4, 2)"));
